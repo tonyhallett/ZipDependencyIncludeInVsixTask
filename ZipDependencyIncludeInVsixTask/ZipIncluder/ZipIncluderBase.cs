@@ -49,11 +49,16 @@ namespace ZipDependencyIncludeInVsixTask
             }
             return Path.Combine(zipIncludeSettings.ProjectFolder, folder);
         }
-        private string GetAssetFolder(string zipAssetFolder)
+        private string GetAssetFolder(IZipAsset zipAsset)
         {
+            var zipAssetFolder = zipAsset.AssetFolder;
             var globalAssetFolder = zipIncludeSettings.AssetFolder;
             if (string.IsNullOrWhiteSpace(zipAssetFolder))
             {
+                if(globalAssetFolder == null)
+                {
+                    logger.LogError($"AssetFolder not specified for zip asset with prefix {zipAsset.ZipPrefix}.  Specify for all with task AssetFolder or individually for the zip asset.");
+                }
                 return globalAssetFolder;
             }
             return GetAbsoluteOrProjectRelativeFolder(zipAssetFolder);
@@ -62,7 +67,11 @@ namespace ZipDependencyIncludeInVsixTask
 
         public List<ZipInclusion> GetIncludedZips(ZipIncludeSettings zipIncludeSettings, ITaskLogger logger)
         {
-            zipIncludeSettings.AssetFolder = GetAbsoluteOrProjectRelativeFolder(zipIncludeSettings.AssetFolder);
+            if(zipIncludeSettings.AssetFolder != null)
+            {
+                zipIncludeSettings.AssetFolder = GetAbsoluteOrProjectRelativeFolder(zipIncludeSettings.AssetFolder);
+            }
+            
             this.zipIncludeSettings = zipIncludeSettings;
 
             this.logger = logger;
@@ -73,7 +82,7 @@ namespace ZipDependencyIncludeInVsixTask
             var zipAssets = ZipAssetFactory.Create(zipIncludeSettings.AssetSettingsPath, logger);
             foreach (var zipAsset in zipAssets)
             {
-                var assetFolder = GetAssetFolder(zipAsset.AssetFolder);
+                var assetFolder = GetAssetFolder(zipAsset);
                 var zipDetails = prefixedVersionedZip.Find(assetFolder, zipAsset.ZipPrefix);
                 string includedZipInVsix = null;
                 string updateVersion;
